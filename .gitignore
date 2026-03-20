@@ -1,0 +1,32 @@
+# =========================
+# Python Backend
+# =========================
+__pycache__/
+*.pyc
+*.pyo
+*.pyd
+.env
+*.sqlite3
+
+# =========================
+# Node / React Frontend
+# =========================
+node_modules/
+frontend/node_modules/
+build/
+frontend/build/
+
+# =========================
+# Temp / unwanted files
+# =========================
+*.log
+*.pdf
+temp.pdf
+
+# =========================
+# IDE / System
+# =========================
+.vscode/
+.idea/
+.DS_Store
+Thumbs.db
