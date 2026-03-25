@@ -21,17 +21,26 @@ def extract_skills(text):
             found_skills.add(skill)
 
     # 🔹 Step 2: Semantic matching (controlled ML)
-    sentences = text.split("\n")
+    # ⚡ BOLT OPTIMIZATION: Collected all valid sentences for batched encoding
+    sentences = [s.strip() for s in text.split("\n") if len(s.strip()) >= 5]
 
-    for sentence in sentences:
-        if len(sentence.strip()) < 5:
-            continue
+    if not sentences:
+        return list(found_skills)
 
-        sentence_embedding = model.encode(sentence, convert_to_tensor=True)
-        similarities = util.cos_sim(sentence_embedding, skill_embeddings)[0]
+    # ⚡ BOLT OPTIMIZATION: Batching NLP encoding operations
+    # Encoding all sentences at once is much faster than one-by-one in a loop
+    sentence_embeddings = model.encode(sentences, convert_to_tensor=True)
 
-        for i, score in enumerate(similarities):
-            if score > 0.6:   # 🔥 Balanced threshold
-                found_skills.add(SKILLS_DB[i])
+    # ⚡ BOLT OPTIMIZATION: Vectorized similarity calculation
+    # util.cos_sim handles matrix-matrix similarity efficiently
+    similarity_matrix = util.cos_sim(sentence_embeddings, skill_embeddings)
+
+    # Find which skills have at least one sentence with similarity > 0.6
+    # This vectorized approach avoids nested loops and takes advantage of GPU
+    matched_skill_indices = (
+        (similarity_matrix > 0.6).any(dim=0).nonzero().flatten()
+    )
+    for idx in matched_skill_indices:
+        found_skills.add(SKILLS_DB[idx.item()])
 
     return list(found_skills)
