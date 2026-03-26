@@ -21,17 +21,22 @@ def extract_skills(text):
             found_skills.add(skill)
 
     # 🔹 Step 2: Semantic matching (controlled ML)
-    sentences = text.split("\n")
+    # Optimization: Batch encode sentences and use vectorized similarity calculation
+    sentences = [s.strip() for s in text.split("\n") if len(s.strip()) >= 5]
 
-    for sentence in sentences:
-        if len(sentence.strip()) < 5:
-            continue
+    if not sentences:
+        return list(found_skills)
 
-        sentence_embedding = model.encode(sentence, convert_to_tensor=True)
-        similarities = util.cos_sim(sentence_embedding, skill_embeddings)[0]
+    # Batch encode all sentences at once
+    sentence_embeddings = model.encode(sentences, convert_to_tensor=True)
 
-        for i, score in enumerate(similarities):
-            if score > 0.6:   # 🔥 Balanced threshold
-                found_skills.add(SKILLS_DB[i])
+    # Calculate similarities for all sentences against all skills in one operation
+    all_similarities = util.cos_sim(sentence_embeddings, skill_embeddings)
+
+    # Identify matches where similarity score > 0.6
+    matches = (all_similarities > 0.6).nonzero(as_tuple=False)
+    for match in matches:
+        skill_idx = match[1].item()
+        found_skills.add(SKILLS_DB[skill_idx])
 
     return list(found_skills)
