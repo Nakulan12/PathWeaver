@@ -32,7 +32,8 @@ def generate_reasoned_path(missing_skills, resume_skills):
                 if prereq not in resume_skills and prereq not in added:
                     path.append({
                         "skill": prereq,
-                        "reason": f"{skill} requires understanding of {prereq} for effective implementation",
+                        "reason": f"{skill} requires understanding of {prereq}"
+                                  " for effective implementation",
                         "is_prerequisite": True
                     })
                     added.add(prereq)
@@ -42,7 +43,9 @@ def generate_reasoned_path(missing_skills, resume_skills):
         if skill not in added:
             path.append({
                 "skill": skill,
-                "reason": f"Required for target role and not found in current skill set. This is a core competency needed for the position.",
+                "reason": "Required for target role and not found in current"
+                          " skill set. This is a core competency needed for"
+                          " the position.",
                 "is_prerequisite": False
             })
             added.add(skill)
