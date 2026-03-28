@@ -12,26 +12,39 @@ skill_embeddings = model.encode(SKILLS_DB, convert_to_tensor=True)
 
 
 def extract_skills(text):
+    """
+    Extracts skills from text using a hybrid approach of keyword matching
+    and batched semantic similarity.
+    """
     text = text.lower()
     found_skills = set()
 
-    # 🔹 Step 1: Direct keyword match (strong baseline)
+    # 🔹 Step 1: Direct keyword match (strong baseline - O(N))
     for skill in SKILLS_DB:
         if skill in text:
             found_skills.add(skill)
 
-    # 🔹 Step 2: Semantic matching (controlled ML)
-    sentences = text.split("\n")
+    # 🔹 Step 2: Semantic matching (Optimized Batched ML)
+    # Filter valid sentences once to avoid redundant checks
+    sentences = [s.strip() for s in text.split("\n") if len(s.strip()) >= 5]
 
-    for sentence in sentences:
-        if len(sentence.strip()) < 5:
-            continue
+    if not sentences:
+        return list(found_skills)
 
-        sentence_embedding = model.encode(sentence, convert_to_tensor=True)
-        similarities = util.cos_sim(sentence_embedding, skill_embeddings)[0]
+    # ⚡ PERFORMANCE BOOST: Batch encode all sentences at once.
+    # This is significantly faster than encoding one by one as it allows
+    # the model to utilize vectorized operations across the entire batch.
+    sentence_embeddings = model.encode(sentences, convert_to_tensor=True)
 
-        for i, score in enumerate(similarities):
-            if score > 0.6:   # 🔥 Balanced threshold
-                found_skills.add(SKILLS_DB[i])
+    # ⚡ PERFORMANCE BOOST: Vectorized similarity calculation.
+    # Instead of nested loops, we compute a similarity matrix [num_sentences x num_skills]
+    # in a single operation using util.cos_sim.
+    similarities = util.cos_sim(sentence_embeddings, skill_embeddings)
+
+    # ⚡ PERFORMANCE BOOST: Matrix thresholding.
+    # Use torch operations to find matching indices directly, avoiding manual iteration.
+    matched_indices = (similarities > 0.6).nonzero(as_tuple=False)
+    for _, skill_idx in matched_indices:
+        found_skills.add(SKILLS_DB[skill_idx.item()])
 
     return list(found_skills)
