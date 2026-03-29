@@ -1,0 +1,3 @@
+## 2025-05-15 - [Batching NLP and In-memory PDF Processing]
+**Learning:** Calling `model.encode` in a loop for every sentence is a massive bottleneck. Batching sentences into a single call allows the underlying library (Sentence-Transformers/PyTorch) to use vectorized operations much more effectively. Additionally, writing to disk for temporary PDF processing introduces unnecessary I/O overhead and potential race conditions in a web server.
+**Action:** Always batch NLP encoding operations and process uploaded files directly from memory buffers (e.g., `fitz.open(stream=content, filetype="pdf")`).
