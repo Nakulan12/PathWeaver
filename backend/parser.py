@@ -1,12 +1,11 @@
 import fitz  # PyMuPDF
 
 async def extract_text(file):
+    # Performance Optimization: Process file in memory to avoid slow disk I/O
     content = await file.read()
 
-    with open("temp.pdf", "wb") as f:
-        f.write(content)
-
-    doc = fitz.open("temp.pdf")
+    # Open document directly from byte stream
+    doc = fitz.open(stream=content, filetype="pdf")
     text = ""
 
     for page in doc:
