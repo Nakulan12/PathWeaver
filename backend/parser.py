@@ -1,15 +1,15 @@
 import fitz  # PyMuPDF
 
 async def extract_text(file):
+    # ⚡ DIRECT BUFFER PROCESSING (Removes slow Disk I/O)
     content = await file.read()
 
-    with open("temp.pdf", "wb") as f:
-        f.write(content)
+    # Open the PDF directly from the memory buffer stream
+    doc = fitz.open(stream=content, filetype="pdf")
 
-    doc = fitz.open("temp.pdf")
     text = ""
-
     for page in doc:
         text += page.get_text()
 
+    doc.close() # Good practice to close the document
     return text
