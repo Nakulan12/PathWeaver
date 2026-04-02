@@ -20,18 +20,26 @@ def extract_skills(text):
         if skill in text:
             found_skills.add(skill)
 
-    # 🔹 Step 2: Semantic matching (controlled ML)
-    sentences = text.split("\n")
+    # 🔹 Step 2: Semantic matching (optimized batch processing)
+    # Filter out empty or too short sentences before encoding
+    sentences = [s.strip() for s in text.split("\n") if len(s.strip()) >= 5]
 
-    for sentence in sentences:
-        if len(sentence.strip()) < 5:
-            continue
+    if not sentences:
+        return list(found_skills)
 
-        sentence_embedding = model.encode(sentence, convert_to_tensor=True)
-        similarities = util.cos_sim(sentence_embedding, skill_embeddings)[0]
+    # Batch encode all sentences at once for better throughput
+    sentence_embeddings = model.encode(sentences, convert_to_tensor=True)
 
-        for i, score in enumerate(similarities):
-            if score > 0.6:   # 🔥 Balanced threshold
-                found_skills.add(SKILLS_DB[i])
+    # Vectorized similarity calculation: (num_sentences, embedding_dim) x (num_skills, embedding_dim)^T
+    # This results in a (num_sentences, num_skills) matrix of similarity scores
+    cosine_scores = util.cos_sim(sentence_embeddings, skill_embeddings)
+
+    # Efficiently find all skills that exceed the threshold in any sentence
+    # We take the max similarity score for each skill across all sentences
+    max_scores, _ = cosine_scores.max(dim=0)
+
+    for i, score in enumerate(max_scores):
+        if score > 0.6:  # 🔥 Balanced threshold
+            found_skills.add(SKILLS_DB[i])
 
     return list(found_skills)
