@@ -1,4 +1,5 @@
 from sentence_transformers import SentenceTransformer, util
+import torch
 
 model = SentenceTransformer('all-MiniLM-L6-v2')
 
@@ -20,18 +21,19 @@ def extract_skills(text):
         if skill in text:
             found_skills.add(skill)
 
-    # 🔹 Step 2: Semantic matching (controlled ML)
-    sentences = text.split("\n")
+    # 🔹 Step 2: Semantic matching (optimized batch ML)
+    sentences = [s.strip() for s in text.split("\n") if len(s.strip()) >= 5]
 
-    for sentence in sentences:
-        if len(sentence.strip()) < 5:
-            continue
+    if sentences:
+        # ⚡ Batch encode all sentences at once for significant speedup
+        sentence_embeddings = model.encode(sentences, convert_to_tensor=True)
 
-        sentence_embedding = model.encode(sentence, convert_to_tensor=True)
-        similarities = util.cos_sim(sentence_embedding, skill_embeddings)[0]
+        # ⚡ Vectorized similarity matrix calculation
+        cos_sims = util.cos_sim(sentence_embeddings, skill_embeddings)
 
-        for i, score in enumerate(similarities):
-            if score > 0.6:   # 🔥 Balanced threshold
-                found_skills.add(SKILLS_DB[i])
+        # ⚡ Find skills that have at least one sentence with similarity > 0.6
+        matched_indices = (cos_sims > 0.6).any(dim=0).nonzero(as_tuple=True)[0]
+        for idx in matched_indices:
+            found_skills.add(SKILLS_DB[idx])
 
     return list(found_skills)
